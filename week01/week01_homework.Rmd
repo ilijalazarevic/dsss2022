@@ -1,0 +1,109 @@
+---
+title: "R Notebook"
+output:
+  html_document:
+    df_print: paged
+---
+```{r}
+library(tidyverse)
+```
+
+
+```{r}
+file_url <- "https://covid.ourworldindata.org/data/owid-covid-data.csv"
+data_set <- read.csv(file_url, 
+                     header = TRUE,
+                     check.names = FALSE,
+                     stringsAsFactors = FALSE)
+head(data_set)
+```
+## Task 1.
+
+Use table() and as.data.frame to produce a frequency distribution of data_set$location: that is how we will learn how many data points do we have per country (but for the World in general, as you might have observed that World is a value found in data_set$location as well). Name your data.frame: country_frame. Please give some nice names - country and observations - to your resulting data.frame’s columns and print out the result’s first twenty rows. Print the unique number of countries present in your.
+
+
+```{r}
+data_set <- as.data.frame(data_set)
+country_frame <- as.data.frame(table(data_set$location))
+names(country_frame) <- c("Country", "Observations")
+print(head(country_frame, n=20))
+```
+```{r}
+length(country_frame$Country)
+```
+
+## Task 2.
+You may have noticed that not only World, but Europe, European Union, Asia etc. are also values in the data_set$location column. But if we need a per-country analysis of the data, then we need to remove such entries. Luckily, I have found out that all values in the data_set$iso_code column for such entires begin with OWID_. Please remove all entries that have values begininng with OWID_ in the data_set$iso_code column from the data_set data.frame using filter() and grepl() (hint: "^OWID_", we mentioned this in the classroom on June 4). Reproduce thecountry_frame` data.frame from Task 1 without these entries and check out how many countries are now present.
+
+```{r}
+country_frame <- data_set[!grepl(data_set$iso_code, pattern="^OWID_"), c("location")] %>% table() %>% as.data.frame()
+dim(country_frame)
+```
+## Task 3.
+Use substr() to extract year from data_set$date and place it in a new column: data_set$year. The use group_by() and summarise() to compute the mean number of new_cases per country, per year, rounded on two decima places. Select only the variables that you need for this analysis in the beginning of your pipeline. Beware of the NAs in the data (hint: na.rm is an argument in what R functions…) and sort the result in the descending order of mean_new_cases by using arrange() (your variable where the mean of new_cases is found).
+```{r}
+data_set %>%
+  mutate(year = substr(date, start=0, stop=4)) %>%
+  select(year, location, new_cases) %>%
+  group_by(location, year) %>%
+  summarise(mean_new_cases = mean(new_cases, na.rm=TRUE)) %>%
+  arrange(desc(mean_new_cases))
+```
+## Task 4.
+The dataset in front of us is a time series, of course: there is an observation for each day since the onset of the pandemic. So, it is quite possible that some values in columns such as population and population_density have changed with time, not to mention new_cases and similar. However, say that we want to take an approximate look at the relationship of people_vaccinated, population, population_density, people_vaccinated_per_hundred, gdp_per_capita, and total_cases - per country. What we need is a dataset that takes a country, and then the latest available observation for each of the mentioned variables. Use a dplyr pipeline to produce such a dataset and call it country_analysis_frame. Hint: make use of slice_tail() from dplyr. NOTE. It might be the case that some recent data points in the people_vaccinated column are missing; use filter(!is.na(people_vaccinated)) at some point in your pipeline.
+
+```{r}
+country_analysis_frame <- data_set %>% 
+  filter(!grepl(data_set$iso_code, pattern="^OWID_")) %>%
+  select(date, location, people_vaccinated_per_hundred, people_vaccinated, population, population_density, gdp_per_capita, total_cases) %>%
+  filter(!is.na(people_vaccinated)) %>%
+  arrange(date) %>%
+  group_by(location) %>%
+  slice(tail(row_number(), 1))
+country_analysis_frame
+```
+## Task 5.
+You might have observed how your country_analysis_frame is full of NAs! So many missing values, disappointing indeed! Use a combination of apply over columns of country_analysis_frame and is.na() to find out the percent of missing values in each column in country_analysis_frame.
+```{r}
+apply(country_analysis_frame, 2, function(x){
+  round(sum(is.na(x)) / length(x), 4)
+}) %>% as.data.frame()
+```
+## Task 5A.
+Drop the following columns from country_analysis_frame: people_vaccinated_per_hundred, date using select() and print out the first then rows. Hint: use the all_of() dplyr helper function within your select() call.
+```{r}
+country_analysis_frame <- country_analysis_frame %>% 
+  select(-all_of(c("people_vaccinated_per_hundred", "date")))
+  
+head(country_analysis_frame, 10)
+```
+## Task 6.
+Keep only complete observations (i.e. no NA values anywhere) in country_analysis_frame. You will need to learn about the complete.cases() function in order to do so. Reuse your apply() call from Task 4. in order to make sure that no missing values are left. How many countries are left in country_analysis_frame?
+```{r}
+country_analysis_frame <- country_analysis_frame[complete.cases(country_analysis_frame),]
+apply(country_analysis_frame, 2, function(x){
+  round(sum(is.na(x)) / length(x), 4)
+}) %>% as.data.frame()
+```
+## Task 7.
+Produce a new variable, proportion_vaccinated, by dividing people_vaccinated by population; drop both people_vaccinated and population from the data.frame.
+```{r}
+country_analysis_frame <- country_analysis_frame %>%
+  mutate(proportion_vaccinated = people_vaccinated / population)
+
+country_analysis_frame$people_vaccinated <- NA
+country_analysis_frame$population <- NA
+```
+
+## Congratulations!
+Here is your award: now that you have produced the country_analysis_frame, the shape of things to come appears! Here is how to perform a multiple linear regression in an attempt to predict total_cases_per_million from the following predictors in country_analysis_frame: proportion_vaccinated, population_density and gdp_per_capita.
+
+```{r}
+mlr_model <- lm(total_cases_per_million ~ 
+                  proportion_vaccinated + 
+                  population_density + 
+                  gdp_per_capita, 
+                data = country_analysis_frame)
+summary(mlr_model)
+```
+
