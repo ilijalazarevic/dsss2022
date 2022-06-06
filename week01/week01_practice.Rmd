@@ -1,0 +1,272 @@
+---
+title: "Week01 Practice"
+output: html_notebook
+---
+
+Okay, so this will be a practice notebook for first week.
+
+```{r}
+library(tidyverse)
+```
+
+
+```{r}
+data(mpg)
+```
+
+Dataset description:
+- manufacturer: manufacturer name
+
+- model: model name
+
+- displ: engine displacement, in litres
+
+- year:year of manufacture
+
+- cyl: number of cylinders
+
+- trans: type of transmission
+
+- drv: the type of drive train, where f = front-wheel drive, r = rear wheel drive, 4 = 4wd
+
+- cty: city miles per gallon
+
+- hwy: highway miles per gallon
+
+- fl: fuel type
+
+- class: "type" of car
+
+
+Dimensions:
+```{r}
+dim(mpg)
+```
+
+Head:
+```{r}
+head(mpg, 5)
+```
+
+
+Summary: 
+```{r}
+summary(mpg)
+```
+```{r}
+glimpse(mpg)
+```
+
+```{r}
+ggplot(data=mpg) +
+  geom_point(mapping = aes(x = displ, y= cyl, color = class)) 
+```
+
+```{r}
+ggplot(data=mpg) +
+  geom_point(mapping = aes(x = displ, y= hwy, fill = class), shape=21, color='black') 
+```
+```{r}
+ggplot(data=mpg) +
+  geom_point(mapping = aes(x = displ, y= displ, color = displ < 5), shape=21) +
+  facet_wrap(~ class, ncol = 3)
+```
+```{r}
+ggplot(data=mpg) +
+  geom_point(mapping = aes(x = displ, y= hwy), shape=21) +
+  facet_grid(cty ~ .)
+```
+
+```{r}
+ggplot(data = mpg) + 
+  geom_point(mapping = aes(x = displ, y = hwy, color= class)) +
+  facet_grid(drv ~ .)
+```
+```{r}
+mpg$cylc = as.character(mpg$cyl)
+
+ggplot(data=mpg) +
+  geom_point(mapping = aes(x = displ, y= hwy, color = class, shape = cylc)) 
+```
+
+```{r}
+ggplot(data = mpg) + 
+  geom_point(mapping = aes(x = displ, y = hwy, color = class)) +
+  facet_grid(. ~ cyl)
+```
+```{r}
+ggplot(data = mpg) + 
+  geom_point(mapping = aes(x = displ, y = hwy)) + 
+  facet_wrap(~ class, nrow = 2)
+```
+
+## Geometric objects
+
+```{r}
+ggplot(data = mpg, mapping = aes(x = displ, y = hwy)) + 
+  geom_smooth() + 
+  geom_point(mapping = aes(color = class))
+```
+
+```{r}
+ggplot(data = mpg) +
+  geom_bar(mapping = aes(x=class))
+```
+
+```{r}
+ggplot(data=mpg) +
+  geom_histogram(mapping=aes(x=hwy))
+```
+
+```{r}
+ggplot(data = mpg, mapping = aes(x = displ, y = hwy, color = drv)) + 
+  geom_point() + 
+  geom_smooth(se = FALSE)
+```
+
+```{r}
+ggplot(data = mpg, mapping = aes(x = displ, y = hwy)) + 
+  geom_point() + 
+  geom_smooth()
+```
+
+
+```{r}
+ggplot() + 
+  geom_point(data = mpg, mapping = aes(x = displ, y = hwy)) + 
+  geom_smooth(data = mpg, mapping = aes(x = displ, y = hwy))
+```
+
+```{r}
+ggplot(data = mpg, mapping = aes(x = displ, y = hwy)) +
+  geom_point() +
+  geom_smooth(se = FALSE, color = 'black')
+```
+```{r}
+ggplot(data = mpg, mapping = aes(x = displ, y = hwy)) +
+  geom_point() +
+  geom_smooth(se = FALSE, color = 'blue', mapping = aes(group = drv))
+```
+
+```{r}
+ggplot(data = mpg, mapping = aes(x = displ, y = hwy, color = drv)) +
+  geom_point() +
+  geom_smooth(se = FALSE)
+```
+```{r}
+ggplot(data = mpg, mapping = aes(x = displ, y = hwy)) +
+  geom_point(mapping = aes(color = drv)) +
+  geom_smooth(se = FALSE)
+```
+```{r}
+ggplot(data = mpg, mapping = aes(x = displ, y = hwy)) +
+  geom_point(mapping = aes(color = drv)) +
+  geom_smooth(mapping = aes(linetype = drv), se = FALSE)
+```
+```{r}
+ggplot(data = mpg, mapping = aes(x = displ, y = hwy)) +
+  geom_point(mapping = aes(fill = drv, stroke=2), size=3, shape=21, color='white')
+```
+## Statistical transformations
+
+```{r}
+data(diamonds)
+str(diamonds)
+```
+```{r}
+head(diamonds, 5)
+```
+```{r}
+ggplot(data=diamonds) +
+  geom_bar(mapping=aes(x=cut))
+```
+```{r}
+ggplot(data = diamonds) + 
+  stat_count(mapping = aes(x = cut))
+```
+```{r}
+ggplot(data = diamonds) + 
+  stat_summary(
+    mapping = aes(x = cut, y = depth),
+    fun.min = min,
+    fun.max = max,
+    fun = median
+  )
+```
+```{r}
+ggplot(data = diamonds) +
+  geom_pointrange(
+    mapping = aes(x = cut, y = depth),
+    stat = 'summary',
+    fun.min = min,
+    fun.max = max,
+    fun = median
+  )
+```
+```{r}
+ggplot(data=diamonds) + 
+  geom_col(mapping=aes(x=cut, y=depth))
+```
+## Position arguments 
+
+```{r}
+ggplot(data = diamonds) + 
+  geom_bar(mapping = aes(x = cut, fill = clarity), position = "fill")
+```
+```{r}
+ggplot(data = diamonds) + 
+  geom_bar(mapping = aes(x = cut, fill = clarity), position = "dodge")
+```
+### Excercises
+ 
+```{r}
+ ggplot(data = mpg, mapping = aes(x = cty, y = hwy)) + 
+  geom_point(position = 'jitter')
+```
+```{r}
+ggplot(data = mpg, mapping = aes(x = cty, y = hwy)) + 
+  geom_count(position ='jitter')
+```
+```{r}
+ggplot(data=mpg) +
+  geom_boxplot(mapping=aes(y=hwy))
+```
+## Coordinate systems
+
+### Excercises
+
+
+```{r}
+bar <- ggplot(data = diamonds) + 
+  geom_bar(
+    mapping = aes(x = cut, fill = cut), 
+    show.legend = FALSE,
+    width = 1
+  ) + 
+  theme(aspect.ratio = 1) +
+  labs(x = NULL, y = NULL)
+
+bar + coord_flip()
+bar + coord_polar()
+```
+
+```{r}
+bar <- ggplot(data = diamonds) + 
+  geom_bar(mapping = aes(x = cut, fill = clarity), position = "fill") +
+  theme(aspect.ratio = 1) +
+  labs(x = NULL, y = NULL)
+
+bar + coord_flip()
+bar + coord_polar()
+
+```
+```{r}
+ggplot(data = mpg, mapping = aes(x = cty, y = hwy)) +
+  geom_point() + 
+  geom_abline(slope = 1, intercept = 0) +
+  coord_fixed()
+```
+
+
+
+
