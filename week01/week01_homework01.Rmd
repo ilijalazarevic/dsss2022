@@ -17,8 +17,11 @@ data_set <- read.csv(file_url,
                      stringsAsFactors = FALSE)
 head(data_set)
 ```
-## Task 1.
+```{r}
+dim(data_set)
+```
 
+## Task 1.
 Use table() and as.data.frame to produce a frequency distribution of data_set$location: that is how we will learn how many data points do we have per country (but for the World in general, as you might have observed that World is a value found in data_set$location as well). Name your data.frame: country_frame. Please give some nice names - country and observations - to your resulting data.frame’s columns and print out the result’s first twenty rows. Print the unique number of countries present in your.
 
 
@@ -46,7 +49,7 @@ data_set %>%
   mutate(year = substr(date, start=0, stop=4)) %>%
   select(year, location, new_cases) %>%
   group_by(location, year) %>%
-  summarise(mean_new_cases = mean(new_cases, na.rm=TRUE)) %>%
+  summarise(mean_new_cases = round(mean(new_cases, na.rm=TRUE), 2)) %>%
   arrange(desc(mean_new_cases))
 ```
 ## Task 4.
@@ -54,8 +57,14 @@ The dataset in front of us is a time series, of course: there is an observation 
 
 ```{r}
 country_analysis_frame <- data_set %>% 
-  filter(!grepl(data_set$iso_code, pattern="^OWID_")) %>%
-  select(date, location, people_vaccinated_per_hundred, people_vaccinated, population, population_density, gdp_per_capita, total_cases) %>%
+  select(location,
+         people_vaccinated,
+         population,
+         population_density, 
+         people_vaccinated_per_hundred,
+         gdp_per_capita,
+         total_cases_per_million, 
+         date) %>%
   filter(!is.na(people_vaccinated)) %>%
   arrange(date) %>%
   group_by(location) %>%
@@ -66,7 +75,7 @@ country_analysis_frame
 You might have observed how your country_analysis_frame is full of NAs! So many missing values, disappointing indeed! Use a combination of apply over columns of country_analysis_frame and is.na() to find out the percent of missing values in each column in country_analysis_frame.
 ```{r}
 apply(country_analysis_frame, 2, function(x){
-  round(sum(is.na(x)) / length(x), 4)
+  (sum(is.na(x)) / length(x)) * 100
 }) %>% as.data.frame()
 ```
 ## Task 5A.

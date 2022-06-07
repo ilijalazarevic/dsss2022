@@ -1,0 +1,223 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+```{r}
+library(tidyverse)
+```
+
+# The data set
+```{r}
+file_url <- "https://covid.ourworldindata.org/data/owid-covid-data.csv"
+data_set <- read.csv(file_url, 
+                     header = TRUE,
+                     check.names = FALSE,
+                     stringsAsFactors = FALSE)
+head(data_set)
+```
+```{r}
+data_set <- data_set %>% 
+  filter(!str_detect(iso_code, "^OWID_"))
+```
+# Task 0
+```{r}
+data_set$year <- substr(data_set$date, 1, 4)
+plot_frame <- data_set %>% 
+  select(new_cases, year) %>% 
+  group_by(year) %>% 
+  summarise(cases = sum(new_cases, na.rm = TRUE))
+print(plot_frame)
+```
+Let’s define the visualization mapping in aes() and plot nothing, for the beginning:
+
+```{r}
+ggplot(data = plot_frame, 
+       aes(x = year, y = cases))
+```
+Ok: ggplot2 recognizes my variables and their scales, but plots nothing. I need to add some geoms there for plot to materialize:
+```{r}
+ggplot(data = plot_frame, 
+       aes(x = year, y = cases)) + 
+  geom_point(size = 1.5, color = "darkred") + 
+  geom_path(group = 1, size = .5, color = "darkred")
+```
+I could have added a different geom:
+```{r}
+ggplot(data = plot_frame, 
+       aes(x = year, y = cases)) + 
+  geom_bar(width = .5, stat = "identity", fill = "darkred", color = "black")
+```
+Now, what about total_cases per month and per year? I need a new plot_frame for this:
+```{r}
+data_set$year <- substr(data_set$date, 1, 4)
+data_set$month <- as.character(substr(data_set$date, 6, 7))
+plot_frame <- data_set %>% 
+  select(total_cases, year, month) %>% 
+  group_by(year, month) %>% 
+  summarise(cases = sum(total_cases, na.rm = TRUE))
+print(plot_frame)
+```
+```{r}
+ggplot(data = plot_frame, 
+       aes(x = month, 
+           y = cases,
+           fill = year, 
+           color = year)) + 
+  geom_bar(width = .5,
+           stat = "identity", 
+           position = position_dodge(width = 0.5))
+```
+Or I can do facet_wrap:
+```{r}
+ggplot(data = plot_frame, 
+       aes(x = month, 
+           y = cases,
+           fill = year, 
+           color = year)) + 
+  geom_bar(width = .5,
+           stat = "identity") + 
+  facet_wrap(~year, nrow = 3)
+```
+Now I can begin using theme() in order to style my chart.
+```{r}
+ggplot(data = plot_frame, 
+       aes(x = month, 
+           y = cases,
+           fill = year, 
+           color = year)) + 
+  geom_bar(width = .5,
+           stat = "identity") + 
+  facet_wrap(~year, nrow = 3) + 
+  theme_light() + 
+  theme(legend.position = "top")
+```
+Even better:
+```{r}
+ggplot(data = plot_frame, 
+       aes(x = month, 
+           y = cases,
+           fill = year, 
+           color = year)) + 
+  geom_bar(width = .5,
+           stat = "identity") + 
+  facet_wrap(~year, nrow = 3) + 
+  theme_bw() + 
+  theme(legend.position = "top") + 
+  theme(strip.background = element_rect(fill = "white", color = "white")) + 
+  theme(panel.border = element_blank())
+```
+If you want to avoid using the scientific notation on a scale (look at our y-axis), you can use the scales library:
+```{r}
+# install.packages('scales')
+library(scales)
+ggplot(data = plot_frame, 
+       aes(x = month, 
+           y = cases,
+           fill = year, 
+           color = year)) + 
+  geom_bar(width = .5,
+           stat = "identity") + 
+  facet_wrap(~year, nrow = 3) + 
+  scale_y_continuous(labels = comma) + 
+  theme_bw() + 
+  theme(legend.position = "top") + 
+  theme(strip.background = element_rect(fill = "white", color = "white")) + 
+  theme(panel.border = element_blank())
+```
+Let’s now produce a scatter plot of the - mean number of new_cases per day, per country - and the country’s population (taking the latest available data).
+
+Population first:
+```{r}
+population_set <- data_set %>% 
+  select(location, date, population) %>% 
+  arrange(location, date) %>% 
+  group_by(location) %>% 
+  slice_tail()
+population_set
+```
+Now, the average number of total_cases per country:
+```{r}
+cases_set <- data_set %>% 
+  select(location, new_cases) %>% 
+  group_by(location) %>% 
+  summarise(mean_cases_per_day = mean(new_cases, na.rm = TRUE))
+cases_set
+```
+Now I need to join cases_set to population_set by locations; if you are interested to learn about relational structures and join operations in dplyr in R, go read section 13 Relational data in R for Data Science.
+```{r}
+plot_frame <- left_join(population_set, 
+                        cases_set,
+                        by = "location")
+plot_frame
+```
+Here goes our scatter plot:
+```{r}
+ggplot(data = plot_frame, 
+       aes(x = population, y = mean_cases_per_day)) + 
+  geom_point(size = 1, color = "darkred") + 
+  geom_point(size = .75, color = "white") + 
+  scale_y_continuous(labels = comma) + 
+  scale_x_continuous(labels = comma) + 
+  theme_bw() + 
+  theme(panel.border = element_blank())
+```
+Maybe using log() scales?
+```{r}
+ggplot(data = plot_frame, 
+       aes(x = log(population), 
+           y = log(mean_cases_per_day))) + 
+  geom_point(size = 1, color = "darkred") + 
+  geom_point(size = .75, color = "white") + 
+  scale_y_continuous(labels = comma) + 
+  scale_x_continuous(labels = comma) + 
+  theme_bw() + 
+  theme(panel.border = element_blank())
+```
+We can place the best fitting linear model on the chart by geom_smooth(method="lm):
+```{r}
+ggplot(data = plot_frame, 
+       aes(x = log(population), 
+           y = log(mean_cases_per_day))) + 
+  geom_smooth(size = .25, method = "lm") + 
+  geom_point(size = 1, color = "darkred") + 
+  geom_point(size = .75, color = "white") + 
+  scale_y_continuous(labels = comma) + 
+  scale_x_continuous(labels = comma) + 
+  theme_bw() + 
+  theme(panel.border = element_blank())
+```
+## Task 1.
+Reuse my code to produce a chart showing the total number of new_cases per continent and per year.
+```{r}
+task1_set <- data_set %>%
+  select(continent, date, new_cases) %>%
+  mutate(year = substr(date, 1, 4)) %>%
+  group_by(continent, year) %>%
+  summarise(new_cases = sum(new_cases, na.rm = TRUE), count = n())
+```
+```{r}
+ggplot(data=task1_set, mapping=aes(x=continent, y=new_cases, color=year, fill=year)) +
+  geom_bar(width=.4, stat='identity', position = position_dodge(width = 0.5)) + 
+  scale_y_continuous(labels = comma) 
+```
+
+## Task 2.
+Reuse my code to produce a scatter plot of:
+* the mean gdp_per_capita per country, and
+* the country population_density.
+```{r}
+task2_set <- data_set %>% 
+  select(gdp_per_capita, location, continent, population_density) %>%
+  group_by(location, continent) %>%
+  summarise(gdp_per_capita_mean=mean(gdp_per_capita, na.rm = TRUE), 
+            population_density=mean(population_density, na.rm = TRUE))
+```
+```{r}
+ggplot(data=task2_set,
+       mapping=aes(x=gdp_per_capita_mean, 
+                   y=log(population_density), shape=continent)) +
+  geom_point()
+```
+
+
+
