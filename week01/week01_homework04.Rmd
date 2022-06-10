@@ -1,0 +1,83 @@
+---
+title: "R Notebook"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r echo=FALSE}
+library(tidyverse)
+```
+
+
+```{r}
+# set constants
+WORK_DIR = getwd()
+DATA_DIR = paste0(WORK_DIR, '/_data')
+```
+
+# Load data
+
+```{r}
+df = as.data.frame(read_csv("/home/ikacikac/workspace/r/dsss2022/_data/insurance.csv"))
+glimpse(df)
+```
+```{r}
+df.s <- df %>% select(bmi, charges)
+df.s
+```
+```{r echo=FALSE}
+df.s %>% ggplot(aes(x=bmi, y=charges)) + geom_point() + geom_smooth()
+```
+```{r}
+sse <- function(param) {
+  beta_1 <- param[1]
+  beta_2 <- param[2]
+  v <- beta_1 + beta_2 * df.s$bmi
+  e <- sum((v - df.s$charges)^2)
+  return(e)
+}
+```
+
+```{r}
+b1 <- runif(1, -10, 10)
+b2 <- runif(1, -10, 10)
+
+solution <- optim(
+  par = c(b1, b2),
+  fn = sse,
+  method = "Nelder-Mead",
+  # method = "CG",
+  lower = -Inf,
+  upper = Inf
+)
+```
+
+```{r}
+print(paste0("Solution value ", solution$value))
+```
+```{r}
+print(paste0("Solution parameters ", solution$par))
+```
+```{r}
+linear_model <- lm(charges ~ bmi , data=df.s)
+print(coefficients(linear_model))
+```
+
+# Additional practice
+
+```{r}
+likelihood <- data.frame(parameter = seq(.01, .99, by = .01))
+likelihood$likelihood <- likelihood$parameter^2  * (1-likelihood$parameter)
+ggplot(data=likelihood, mapping=aes(x=parameter, y=likelihood)) + geom_point()
+```
+```{r}
+# use dbinom and run it for a seq of probabilities
+# to get the maximum likelihood to get 2 heads out of 3 flips
+data.frame(p=dbinom(2, size=3, prob = seq(.01, 0.99, by=.01)), x=1:99) %>%
+  ggplot(aes(x=x, y=p)) + 
+  geom_point()
+```
+
+
+
