@@ -79,5 +79,14 @@ data.frame(p=dbinom(2, size=3, prob = seq(.01, 0.99, by=.01)), x=1:99) %>%
   geom_point()
 ```
 
+```{r}
+data.frame(p=dgeom(1:10, prob=.5), x=1:10) %>%
+  ggplot(aes(x=x, y=p)) + 
+  geom_bar(stat='identity')
+```
 
-
+```{r}
+data.frame(p=dnbinom(1:10, size=7, prob=.5), x=1:10) %>%
+  ggplot(aes(x=x, y=p)) + 
+  geom_bar(stat='identity')
+```
